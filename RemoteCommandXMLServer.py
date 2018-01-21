@@ -3,6 +3,7 @@ from xmlrpc.server import SimpleXMLRPCRequestHandler
 import sys
 import RemoteCommandInclude
 import subprocess
+import argparse
 
 
 # Restrict to a particular path.
@@ -26,31 +27,22 @@ def run_command(command, *args):
     else:
         return 'Error: {}'.format(errors)
 
-# Create server
-with SimpleXMLRPCServer(("localhost", RemoteCommandInclude.REMOTECOMMANDPORT),
-                        requestHandler=RequestHandler) as server:
-    server.register_introspection_functions()
 
-    # Register pow() function; this will use the value of
-    # pow.__name__ as the name, which is just 'pow'.
-    server.register_function(pow)
+def main():
+    # Create server
+    with SimpleXMLRPCServer((args.server_ip, args.port),
+                            requestHandler=RequestHandler) as server:
 
-    # Register a function under a different name
-    def adder_function(x, y):
-        return x + y
-    server.register_function(adder_function, 'add')
+        server.register_function(run_command,
+                                 'run_command')
 
-    # Register an instance; all the methods of the instance are
-    # published as XML-RPC methods (in this case, just 'mul').
-    class MyFuncs:
-        def mul(self, x, y):
-            return x * y
+        sys.stdout.write("Starting to serve forever...\n\n")
+        # Run the server's main loop
+        server.serve_forever()
 
-    server.register_instance(MyFuncs())
 
-    server.register_function(run_command,
-                             'run_command')
-
-    sys.stdout.write("Starting to serve forever...\n\n")
-    # Run the server's main loop
-    server.serve_forever()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--server_ip', help="IP to use for the server.", default='localhost')
+    parser.add_argument('-p', '--port', help="Port to bind to.", default=RemoteCommandInclude.REMOTECOMMANDPORT)
+    args = parser.parse_args()
